@@ -5,8 +5,9 @@ const {
   getProfile,
 } = require("../controllers/auth.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
+const upload = require("../middlewares/upload");
 
-router.post("/register", register);
+router.post("/register", upload.single("profilePicture"), register);
 router.post("/login", login);
 router.get("/profile", authMiddleware, getProfile);
 

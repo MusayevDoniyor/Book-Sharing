@@ -5,13 +5,14 @@ const jwt = require("jsonwebtoken");
 const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    const profilePicture = req.file ? `/uploads/${req.file.filename}` : null;
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser)
       return res.status(400).json({ message: "Email allaqachon mavjud!" });
 
-    const newUser = new User({ name, email, password });
+    const newUser = new User({ name, email, password, profilePicture });
     await newUser.save();
 
     res.status(201).json({ message: "Ro'yxatdan o'tish muvaffaqiyatli!" });

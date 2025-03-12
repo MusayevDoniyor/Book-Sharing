@@ -4,6 +4,7 @@ const addBook = async (req, res) => {
   try {
     console.log(req.user.id);
     let { title, author, genres, description } = req.body;
+    const coverImage = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!Array.isArray(genres)) genres = [genres];
 
@@ -12,6 +13,7 @@ const addBook = async (req, res) => {
       author,
       genres,
       description,
+      coverImage,
       owner: req.user.id,
     });
 
@@ -24,7 +26,18 @@ const addBook = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    const books = await Book.find().populate("owner", "name email");
+    const { genre, author } = req.query;
+    let query = {};
+
+    if (genre) query.genres = { $in: [genre] };
+    if (author) query.author = new RegExp(author, "i");
+
+    let books = await Book.find(query).populate("owner", "name email");
+
+    if (books.length === 0) {
+      books = await Book.find().populate("owner", "name email");
+    }
+
     res.json({ count: books.length, books });
   } catch (error) {
     res.status(500).json({ message: "Server xatosi", error: error.message });
@@ -48,6 +61,7 @@ const getBookById = async (req, res) => {
 const updateBook = async (req, res) => {
   try {
     const { title, author, genres, description, status } = req.body;
+    const coverImage = req.file ? `/uploads/${req.file.filename}` : null;
 
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ message: "Kitob topilmadi!" });
@@ -66,6 +80,7 @@ const updateBook = async (req, res) => {
     book.author = author ?? book.author;
     book.description = description ?? book.description;
     book.status = status ?? book.status;
+    book.coverImage = coverImage ?? book.coverImage;
 
     await book.save();
     res.json({ message: "Kitob yangilandi!", book });
@@ -92,4 +107,10 @@ const deleteBook = async (req, res) => {
   }
 };
 
-module.exports = { addBook, getAllBooks, getBookById, updateBook, deleteBook };
+module.exports = {
+  addBook,
+  getAllBooks,
+  getBookById,
+  updateBook,
+  deleteBook,
+};

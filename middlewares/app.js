@@ -12,6 +12,8 @@ app.get("/", (req, res) => {
   res.send("Book Sharing Platform API ishlayapti!");
 });
 
+app.use("/uploads", express.static("uploads"));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/borrow", borrowRoutes);

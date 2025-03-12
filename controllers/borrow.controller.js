@@ -94,4 +94,18 @@ const returnBook = async (req, res) => {
   }
 };
 
-module.exports = { requestBorrow, respondToRequest, returnBook };
+const getMyBorrows = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const borrows = await BorrowRequest.find({ borrower: userId }).populate(
+      "book"
+    );
+
+    res.json({ count: borrows.length, borrows });
+  } catch (error) {
+    res.status(500).json({ message: "Server xatosi", error: error.message });
+  }
+};
+
+module.exports = { requestBorrow, respondToRequest, returnBook, getMyBorrows };
