@@ -62,4 +62,36 @@ const respondToRequest = async (req, res) => {
   }
 };
 
-module.exports = { requestBorrow, respondToRequest };
+const returnBook = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    const request = await BorrowRequest.findById(requestId);
+    if (!request) return res.status(404).json({ message: "So'rov topilmadi!" });
+
+    if (request.borrower.toString() !== req.user.id) {
+      return res
+        .status(403)
+        .json({ message: "Faqat olgan kitobingizni qaytara olasiz!" });
+    }
+
+    if (request.status !== "Olingan") {
+      return res
+        .status(400)
+        .json({ message: "Bu kitob qaytarishga mos emas!" });
+    }
+
+    request.status = "Qaytarilgan";
+    await request.save();
+
+    const book = await Book.findById(request.book);
+    book.status = "Mavjud";
+    await book.save();
+
+    res.json({ message: "Kitob qaytarildi!", request });
+  } catch (error) {
+    res.status(500).json({ message: "Server xatosi", error: error.message });
+  }
+};
+
+module.exports = { requestBorrow, respondToRequest, returnBook };
