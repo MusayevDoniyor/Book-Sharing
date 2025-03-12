@@ -1,11 +1,13 @@
 require("dotenv").config();
 const connectDB = require("./config/db");
-const app = require("./middlewares/app");
+const { app, server } = require("./middlewares/app");
 
 connectDB();
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 7700;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(
+    `🚀 Server (REST + WebSocket) is running on http://localhost:${PORT}`
+  );
 });
