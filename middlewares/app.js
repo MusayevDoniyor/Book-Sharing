@@ -10,10 +10,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // Agar front-end specific domain bo‘lsa, uni kiriting
-    methods: ["GET", "POST"], // Ruxsat berilgan metodlar
-    allowedHeaders: ["Content-Type"], // Ruxsat berilgan headerlar
-    credentials: true, // Agar kerak bo‘lsa, cookie va auth ma’lumotlarini qo‘shish
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true,
   },
 });
 

@@ -1,18 +1,19 @@
 const Book = require("../models/book.model");
 const BorrowRequest = require("../models/borrow.model");
+const response = require("../handlers/response");
+const findDocumentById = require("../handlers/findDocument");
 
 const requestBorrow = async (req, res) => {
   try {
     const { bookId } = req.params;
-    const book = await Book.findById(bookId);
+    const book = await findDocumentById(Book, bookId, res, "Kitob topilmadi!");
+    if (!book) return;
 
-    if (!book) return res.status(404).json({ message: "Kitob topilmadi!" });
     if (book.owner.toString() === req.user.id)
-      return res
-        .status(400)
-        .json({ message: "O'zingizning kitobingizni ololmaysiz!" });
+      return response(res, 400, "O'zingizning kitobingizni ololmaysiz!");
+
     if (book.status === "Band")
-      return res.status(400).json({ message: "Kitob band qilingan!" });
+      return response(res, 400, "Kitob band qilingan!");
 
     const borrowRequest = new BorrowRequest({
       book: bookId,
@@ -22,12 +23,12 @@ const requestBorrow = async (req, res) => {
     });
 
     await borrowRequest.save();
-    res.status(201).json({
+    response(res, 201, null, {
       message: "Ijaraga olish so'rovi yuborildi!",
       request: borrowRequest,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    response(res, 500, error);
   }
 };
 
@@ -36,17 +37,28 @@ const respondToRequest = async (req, res) => {
     const { requestId } = req.params;
     const { status } = req.body;
 
-    const request = await BorrowRequest.findById(requestId);
-    if (!request) return res.status(404).json({ message: "So'rov topilmadi!" });
+    const request = await findDocumentById(
+      BorrowRequest,
+      requestId,
+      res,
+      "So'rov topilmadi!"
+    );
+    if (!request) return;
 
-    const book = await Book.findById(request.book);
-    if (!book) return res.status(404).json({ message: "Kitob topilmadi!" });
+    const book = await findDocumentById(
+      Book,
+      request.book,
+      res,
+      "Kitob topilmadi!"
+    );
+    if (!book) return;
 
-    if (book.owner.toString() !== req.user.id) {
-      return res.status(403).json({
-        message: "Faqat o'z kitobingiz uchun so'rovlarga javob bera olasiz!",
-      });
-    }
+    if (book.owner.toString() !== req.user.id)
+      return response(
+        res,
+        403,
+        "Faqat o'z kitobingiz uchun so'rovlarga javob bera olasiz!"
+      );
 
     request.status = status;
     await request.save();
@@ -56,9 +68,9 @@ const respondToRequest = async (req, res) => {
       await book.save();
     }
 
-    res.json({ message: `So'rov ${status} qilindi!`, request });
+    response(res, 200, null, { message: `So'rov ${status} qilindi!`, request });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    response(res, 500, error);
   }
 };
 
@@ -66,31 +78,37 @@ const returnBook = async (req, res) => {
   try {
     const { requestId } = req.params;
 
-    const request = await BorrowRequest.findById(requestId);
-    if (!request) return res.status(404).json({ message: "So'rov topilmadi!" });
+    const request = await findDocumentById(
+      BorrowRequest,
+      requestId,
+      res,
+      "So'rov topilmadi!"
+    );
+    if (!request) return;
 
-    if (request.borrower.toString() !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "Faqat olgan kitobingizni qaytara olasiz!" });
-    }
+    if (request.borrower.toString() !== req.user.id)
+      return response(res, 403, "Faqat olgan kitobingizni qaytara olasiz!");
 
-    if (request.status !== "Olingan") {
-      return res
-        .status(400)
-        .json({ message: "Bu kitob qaytarishga mos emas!" });
-    }
+    if (request.status !== "Olingan")
+      return response(res, 400, "Bu kitob qaytarishga mos emas!");
 
     request.status = "Qaytarilgan";
     await request.save();
 
-    const book = await Book.findById(request.book);
+    const book = await findDocumentById(
+      Book,
+      request.book,
+      res,
+      "Kitob topilmadi!"
+    );
+    if (!book) return;
+
     book.status = "Mavjud";
     await book.save();
 
-    res.json({ message: "Kitob qaytarildi!", request });
+    response(res, 200, null, { message: "Kitob qaytarildi!", request });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    response(res, 500, error);
   }
 };
 
@@ -102,9 +120,9 @@ const getMyBorrows = async (req, res) => {
       "book"
     );
 
-    res.json({ count: borrows.length, borrows });
+    response(res, 200, null, { count: borrows.length, borrows });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    response(res, 500, error);
   }
 };
 

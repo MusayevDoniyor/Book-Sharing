@@ -1,3 +1,5 @@
+const findDocumentById = require("../handlers/findDocument");
+const response = require("../handlers/response");
 const Book = require("../models/book.model");
 
 const addBook = async (req, res) => {
@@ -6,7 +8,9 @@ const addBook = async (req, res) => {
     let { title, author, genres, description } = req.body;
     const coverImage = req.file ? `/uploads/${req.file.filename}` : null;
 
-    if (!Array.isArray(genres)) genres = [genres];
+    if (typeof genres === "string") {
+      genres = genres.split(",").map((g) => g.trim());
+    }
 
     const newBook = new Book({
       title,
@@ -18,9 +22,9 @@ const addBook = async (req, res) => {
     });
 
     await newBook.save();
-    res.status(201).json({ message: "Kitob qo'shildi", book: newBook });
+    return response(res, 201, null, { book: newBook });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    return response(res, 500, error.message);
   }
 };
 
@@ -38,23 +42,28 @@ const getAllBooks = async (req, res) => {
       books = await Book.find().populate("owner", "name email");
     }
 
-    res.json({ count: books.length, books });
+    return response(res, 200, null, { count: books.length, books });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    return response(res, 500, error.message);
   }
 };
 
 const getBookById = async (req, res) => {
   try {
-    const book = await Book.findById(req.params.id).populate(
-      "owner",
-      "name email"
+    const book = await findDocumentById(
+      Book,
+      req.params.id,
+      res,
+      "Kitob topilmadi"
     );
-    if (!book) return res.status(404).json({ message: "Kitob topilmadi!" });
 
-    res.json(book);
+    if (!book) return;
+
+    await book.populate("owner", "name email");
+
+    return response(res, 200, null, book);
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    return response(res, 500, error.message);
   }
 };
 
@@ -63,13 +72,21 @@ const updateBook = async (req, res) => {
     const { title, author, genres, description, status } = req.body;
     const coverImage = req.file ? `/uploads/${req.file.filename}` : null;
 
-    const book = await Book.findById(req.params.id);
-    if (!book) return res.status(404).json({ message: "Kitob topilmadi!" });
+    const book = await findDocumentById(
+      Book,
+      req.params.id,
+      res,
+      "Kitob topilmadi"
+    );
+
+    if (!book) return;
 
     if (book.owner.toString() !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "Siz faqat o'z kitobingizni yangilashingiz mumkin!" });
+      return response(
+        res,
+        403,
+        "Siz faqat o'z kitobingizni yangilashingiz mumkin!"
+      );
     }
 
     if (genres) {
@@ -83,27 +100,31 @@ const updateBook = async (req, res) => {
     book.coverImage = coverImage ?? book.coverImage;
 
     await book.save();
-    res.json({ message: "Kitob yangilandi!", book });
+    return response(res, 200, null, { message: "Kitob yangilandi!", book });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    return response(res, 500, error.message);
   }
 };
 
 const deleteBook = async (req, res) => {
   try {
-    const book = await Book.findById(req.params.id);
-    if (!book) return res.status(404).json({ message: "Kitob topilmadi!" });
+    const book = await findDocumentById(
+      Book,
+      req.params.id,
+      res,
+      "Kitob topilmadi"
+    );
+
+    if (!book) return;
 
     if (book.owner.toString() !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "Siz faqat o'z kitobingizni o'chira olasiz!" });
+      return response(res, 403, "Siz faqat o'z kitobingizni o'chira olasiz!");
     }
 
     await book.deleteOne();
-    res.json({ message: "Kitob o'chirildi!" });
+    return response(res, 200, null, { message: "Kitob o'chirildi!" });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    return response(res, 500, error.message);
   }
 };
 

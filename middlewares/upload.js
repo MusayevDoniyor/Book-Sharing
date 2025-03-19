@@ -9,7 +9,8 @@ if (!fs.existsSync(uploadDir)) {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadDir);
+    console.log("UPLOADS destination");
   },
   filename: (req, file, cb) => {
     cb(
@@ -27,9 +28,27 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const fileExtentionFilter = (req, file, cb) => {
+  const allowedExtensions = [".jpg", ".jpeg", ".png", ".svg"];
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (!allowedExtensions.includes(ext))
+    return cb(
+      new Error("Faqat .jpg, .jpeg, .png, .svg fayllar yuklash mumkin!"),
+      false
+    );
+
+  cb(null, true);
+};
+
 const upload = multer({
   storage,
-  fileFilter,
+  fileFilter: (req, file, cb) => {
+    fileFilter(req, file, (err, fileAllowed) => {
+      if (err) return cb(err);
+      fileExtentionFilter(req, file, cb);
+    });
+  },
   limits: {
     fileSize: 1024 * 1024 * 7,
   },

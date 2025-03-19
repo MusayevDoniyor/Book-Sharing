@@ -1,22 +1,30 @@
 const User = require("../models/user.model");
 const jwt = require("jsonwebtoken");
+const response = require("../handlers/response");
 
 const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    console.log(password);
+
     const profilePicture = req.file ? `/uploads/${req.file.filename}` : null;
 
     const existingUser = await User.findOne({ email });
 
-    if (existingUser)
-      return res.status(400).json({ message: "Email allaqachon mavjud!" });
+    if (existingUser) return response(res, 400, "Email allaqachon mavjud!");
 
     const newUser = new User({ name, email, password, profilePicture });
     await newUser.save();
 
-    res.status(201).json({ message: "Ro'yxatdan o'tish muvaffaqiyatli!" });
+    const user = {
+      name: newUser.name,
+      email: newUser.email,
+      picture: newUser.profilePicture,
+    };
+
+    return response(res, 201, null, user);
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    return response(res, 500, error.message, null);
   }
 };
 
@@ -24,19 +32,19 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(400).json({ message: "Email yoki parol noto'g'ri!" });
 
-    if (user.password !== password)
-      return res.status(400).json({ message: "Email yoki parol noto'g'ri!" });
+    const isMatch = await user.comparePassword(password);
+
+    if (!user) return response(res, 404, "Foydalanuvchi topilmadi!");
+    if (!isMatch) return response(res, 400, "Parol noto'gri!");
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
-    res.json({ token, user });
+    return response(res, 200, null, { token, user });
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    return response(res, 500, error.message, null);
   }
 };
 
@@ -44,9 +52,10 @@ const getProfile = async (req, res) => {
   try {
     console.log(req.user);
     const user = await User.findById(req.user.id).select("-password");
-    res.json(user);
+
+    return response(res, 200, null, user);
   } catch (error) {
-    res.status(500).json({ message: "Server xatosi", error: error.message });
+    return response(res, 500, error.message, null);
   }
 };
 
