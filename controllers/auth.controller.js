@@ -1,4 +1,3 @@
-const { default: mongoose } = require("mongoose");
 const User = require("../models/user.model");
 const jwt = require("jsonwebtoken");
 
@@ -43,6 +42,7 @@ const login = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
+    console.log(req.user);
     const user = await User.findById(req.user.id).select("-password");
     res.json(user);
   } catch (error) {
